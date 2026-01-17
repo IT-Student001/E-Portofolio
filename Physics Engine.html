@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Unity-Style 2D Physics Sandbox</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#1e1e1e;
+  color:#ddd;
+  font-family:Inter,system-ui,sans-serif;
+  display:grid;
+  grid-template-columns:340px 1fr;
+  height:100vh;
+}
+#ui{
+  background:#252526;
+  border-right:1px solid #333;
+  padding:14px;
+  overflow:auto;
+}
+#ui h2{margin:4px 0 12px;font-size:1.1rem}
+label{font-size:.8rem;margin-top:10px;display:block;color:#aaa}
+input,select{width:100%;margin-top:4px;background:#1e1e1e;color:#ddd;border:1px solid #333;padding:6px;border-radius:4px}
+button{
+  margin-top:10px;width:100%;padding:10px;
+  background:#007acc;border:none;border-radius:4px;
+  color:#fff;font-weight:600;cursor:pointer
+}
+button:hover{background:#0e8ce6}
+canvas{width:100%;height:100%;display:block;background:#1b1b1c}
+.panel{border-top:1px solid #333;margin-top:12px;padding-top:10px}
+.stat{font-size:.75rem;color:#999}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <h2>Unity-Style Physics</h2>
+
+  <label>Gravity (m/s²)</label>
+  <input id="gravity" type="range" min="0" max="30" step="0.1" value="9.81">
+
+  <label>Density</label>
+  <input id="density" type="range" min="0.2" max="5" step="0.1" value="1">
+
+  <label>Time Scale</label>
+  <input id="timeScale" type="range" min="0.1" max="2" step="0.1" value="1">
+
+  <label>Shape</label>
+  <select id="shape">
+    <option value="circle">Circle</option>
+    <option value="box">Box</option>
+    <option value="triangle">Triangle</option>
+    <option value="hex">Hexagon</option>
+  </select>
+
+  <button id="add">Create Object</button>
+  <button id="clear">Clear Scene</button>
+
+  <div class="panel">
+    <div class="stat">• SAT collisions (circle + polygon)</div>
+    <div class="stat">• Sleeping bodies</div>
+    <div class="stat">• Friction & restitution</div>
+    <div class="stat">• Drag, fling, scale</div>
+  </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+function resize(){canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight}
+window.addEventListener('resize',resize);resize();
+
+const gravity=document.getElementById('gravity');
+const density=document.getElementById('density');
+const timeScale=document.getElementById('timeScale');
+const shapeSelect=document.getElementById('shape');
+
+const bodies=[];
+
+class Body{
+  constructor(x,y,size,shape){
+    this.x=x; this.y=y; this.size=size; this.shape=shape;
+    this.vx=0; this.vy=0; this.angle=0; this.omega=0;
+    this.friction=0.4; this.restitution=0.3;
+    this.sleep=false; this.sleepTimer=0;
+    this.sleepThreshold=0.05; this.sleepTime=0.5;
+    this.updateMass();
+  }
+  updateMass(){
+    const area=this.shape==='circle'?Math.PI*this.size*this.size:this.size*this.size;
+    this.mass=area*density.value;
+    this.invMass=1/this.mass;
+  }
+  wake(){this.sleep=false;this.sleepTimer=0}
+  applyForces(dt){if(!this.sleep) this.vy+=gravity.value*dt}
+  integrate(dt){
+    if(this.sleep) return;
+    this.x+=this.vx*dt*60;
+    this.y+=this.vy*dt*60;
+    this.angle+=this.omega*dt*60;
+    this.vx*=0.999; this.vy*=0.999; this.omega*=0.999;
+    if(Math.abs(this.vx)<this.sleepThreshold && Math.abs(this.vy)<this.sleepThreshold && Math.abs(this.omega)<this.sleepThreshold){
+      this.sleepTimer+=dt;
+      if(this.sleepTimer>this.sleepTime){this.sleep=true; this.vx=this.vy=this.omega=0}
+    } else this.sleepTimer=0;
+  }
+  bounds(){
+    const g=canvas.height-this.size;
+    if(this.y>g){this.y=g; this.vy=Math.abs(this.vy)>0.5?-this.vy*this.restitution:0; this.vx*=1-this.friction; this.wake()}
+    if(this.x<this.size){this.x=this.size; this.vx*=-this.restitution; this.wake()}
+    if(this.x>canvas.width-this.size){this.x=canvas.width-this.size; this.vx*=-this.restitution; this.wake()}
+  }
+  getVertices(){
+    const sides=this.shape==='triangle'?3:this.shape==='box'?4:this.shape==='hex'?6:0;
+    if(this.shape==='circle' || sides===0) return [];
+    const verts=[];
+    for(let i=0;i<sides;i++){
+      const a=i/sides*Math.PI*2 + this.angle;
+      verts.push({x:this.x+Math.cos(a)*this.size, y:this.y+Math.sin(a)*this.size});
+    }
+    return verts;
+  }
+  draw(){
+    ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.angle);
+    ctx.fillStyle=this.sleep?'#2e7d32':'#4fc3f7'; ctx.strokeStyle='#0b3c5d'; ctx.lineWidth=2;
+    ctx.beginPath();
+    if(this.shape==='circle') ctx.arc(0,0,this.size,0,Math.PI*2);
+    else{
+      const verts=this.getVertices().map(v=>({x:v.x-this.x, y:v.y-this.y}));
+      verts.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));
+      ctx.closePath();
+    }
+    ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+}
+
+// --- SAT Helpers ---
+function proj(axis, verts){
+  let min=Infinity, max=-Infinity;
+  for(const p of verts){
+    const dot=p.x*axis.x+p.y*axis.y;
+    min=Math.min(min,dot);
+    max=Math.max(max,dot);
+  }
+  return {min,max};
+}
+function overlap(a,b){return Math.min(a.max,b.max)-Math.max(a.min,b.min);}
+function closestPointToCircle(poly,circle){
+  let closest=null, minDist=Infinity;
+  for(const v of poly){
+    const dx=circle.x-v.x, dy=circle.y-v.y;
+    const d2=dx*dx+dy*dy;
+    if(d2<minDist){minDist=d2; closest=v;}
+  }
+  return closest;
+}
+
+function SAT(a,b){
+  if(a.shape==='circle' && b.shape==='circle'){
+    const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
+    const p=a.size+b.size-d;
+    if(p<=0) return null;
+    return {nx:dx/d, ny:dy/d, depth:p};
+  }
+  const pa=a.getVertices(), pb=b.getVertices();
+  if(a.shape==='circle' || b.shape==='circle'){
+    const circle=a.shape==='circle'?a:b;
+    const poly=a.shape==='circle'?pb:pa;
+    let minOverlap=Infinity, normal=null;
+
+    // Edge normals
+    for(let i=0;i<poly.length;i++){
+      const v1=poly[i], v2=poly[(i+1)%poly.length];
+      let nx=-(v2.y-v1.y), ny=v2.x-v1.x;
+      const len=Math.hypot(nx,ny); nx/=len; ny/=len;
+      const pr=proj({x:nx,y:ny},poly);
+      const cp=circle.x*nx+circle.y*ny;
+      const ovl=overlap(pr,{min:cp-circle.size,max:cp+circle.size});
+      if(ovl<=0) return null;
+      if(ovl<minOverlap){minOverlap=ovl; normal={x:nx,y:ny}}
+    }
+
+    // Vertex axis
+    const closest=closestPointToCircle(poly,circle);
+    let nx=circle.x-closest.x, ny=circle.y-closest.y;
+    const len=Math.hypot(nx,ny);
+    if(len>0){ nx/=len; ny/=len;
+      const pr=proj({x:nx,y:nx},poly);
+      const cp=circle.x*nx+circle.y*ny;
+      const ovl=overlap(pr,{min:cp-circle.size,max:cp+circle.size});
+      if(ovl<=0) return null;
+      if(ovl<minOverlap){minOverlap=ovl; normal={x:nx,y:ny}}
+    }
+
+    return a.shape==='circle'?{nx:-normal.x, ny:-normal.y, depth:minOverlap}:{nx:normal.x, ny:normal.y, depth:minOverlap};
+  }
+
+  // Polygon-Polygon
+  const polys=[pa,pb]; let minOverlap=Infinity, normal=null;
+  for(const poly of polys){
+    for(let i=0;i<poly.length;i++){
+      const v1=poly[i], v2=poly[(i+1)%poly.length];
+      let nx=-(v2.y-v1.y), ny=v2.x-v1.x;
+      const len=Math.hypot(nx,ny); nx/=len; ny/=len;
+      const ovl=overlap(proj({x:nx,y:ny},pa), proj({x:nx,y:ny},pb));
+      if(ovl<=0) return null;
+      if(ovl<minOverlap){minOverlap=ovl; normal={x:nx,y:ny}}
+    }
+  }
+  return {nx:normal.x, ny:normal.y, depth:minOverlap};
+}
+
+function collide(a,b){
+  const mtv=SAT(a,b); if(!mtv) return;
+  const im=a.invMass+b.invMass;
+  a.x-=mtv.nx*mtv.depth*(a.invMass/im);
+  a.y-=mtv.ny*mtv.depth*(a.invMass/im);
+  b.x+=mtv.nx*mtv.depth*(b.invMass/im);
+  b.y+=mtv.ny*mtv.depth*(b.invMass/im);
+
+  const rvx=b.vx-a.vx, rvy=b.vy-a.vy;
+  const vn=rvx*mtv.nx+rvy*mtv.ny; if(vn>0) return;
+  const j=-(1+Math.min(a.restitution,b.restitution))*vn/im;
+  a.vx-=j*mtv.nx*a.invMass; a.vy-=j*mtv.ny*a.invMass;
+  b.vx+=j*mtv.nx*b.invMass; b.vy+=j*mtv.ny*b.invMass;
+  a.wake(); b.wake();
+}
+
+// --- Drag & Interaction ---
+let drag=null, last=null;
+canvas.onmousedown=e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  for(const b of bodies){
+    if(b.shape==='circle' ? Math.hypot(b.x-mx,b.y-my)<b.size : pointInPoly(mx,my,b.getVertices())){
+      drag=b; last={x:mx,y:my}; b.wake(); break;
+    }
+  }
+};
+canvas.onmousemove=e=>{
+  if(!drag) return;
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  drag.vx=mx-last.x; drag.vy=my-last.y;
+  drag.x=mx; drag.y=my; last={x:mx,y:my};
+};
+canvas.onmouseup=()=>drag=null;
+
+function pointInPoly(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
+    const intersect=((yi>y)!=(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi);
+    if(intersect) inside=!inside;
+  }
+  return inside;
+}
+
+// --- Main Loop ---
+let lt=performance.now();
+function loop(t){
+  const dt=(t-lt)/1000*timeScale.value; lt=t;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(const b of bodies){b.updateMass(); b.applyForces(dt); b.integrate(dt); b.bounds()}
+  for(let i=0;i<bodies.length;i++) for(let j=i+1;j<bodies.length;j++) collide(bodies[i],bodies[j]);
+  for(const b of bodies) b.draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// --- UI ---
+document.getElementById('add').onclick=()=>bodies.push(new Body(canvas.width/2,80,28,shapeSelect.value));
+document.getElementById('clear').onclick=()=>bodies.length=0;
+</script>
+</body>
+</html>

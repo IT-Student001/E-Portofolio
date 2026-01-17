@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Appeal AI — Chat UI</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f1724; /* deep navy */
+      --panel:#0b1220;
+      --muted:#9aa4b2;
+      --accent:#7c5cff;
+      --glass: rgba(255,255,255,0.04);
+      --ai-bubble: linear-gradient(135deg,#0f1724 0%, #0b1b2e 100%);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(124,92,255,0.12), transparent 8%),
+                  radial-gradient(900px 500px at 90% 90%, rgba(0,200,255,0.03), transparent 6%),
+                 var(--bg);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:28px;
+    }
+
+    /* Page layout */
+    .app{
+      max-width:1100px;margin:0 auto;height:87vh;display:grid;grid-template-columns:260px 1fr;gap:20px;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:var(--radius);padding:18px;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.03);
+      display:flex;flex-direction:column;gap:14px;height:100%;
+    }
+    .brand{display:flex;gap:10px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#00c2ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#071129}
+    .brand h1{font-size:14px;margin:0}
+    .brand p{font-size:11px;margin:0;color:var(--muted)}
+
+    .side-actions{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+    .btn{background:var(--glass);border-radius:10px;padding:10px 12px;border:1px solid rgba(255,255,255,0.02);cursor:pointer;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:10px}
+    .btn:hover{transform:translateY(-2px)}
+
+    .conversations{flex:1;overflow:auto;padding-right:4px}
+    .conv{padding:10px;border-radius:10px;display:flex;gap:10px;align-items:center;cursor:pointer}
+    .conv:hover{background:rgba(255,255,255,0.01)}
+    .conv .title{font-weight:600}
+    .conv .sub{font-size:12px;color:var(--muted)}
+
+    .footer{font-size:12px;color:var(--muted)}
+
+    /* Chat panel */
+    .panel{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:var(--radius);padding:0;display:flex;flex-direction:column;height:100%;border:1px solid rgba(255,255,255,0.03);overflow:hidden;
+    }
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.02)}
+    .session-title{display:flex;gap:12px;align-items:center}
+    .session-title h2{margin:0;font-size:15px}
+    .meta{font-size:13px;color:var(--muted)}
+
+    .messages{flex:1;overflow:auto;padding:22px;display:flex;flex-direction:column;gap:16px}
+
+    /* Bubbles */
+    .msg{max-width:78%;padding:12px 14px;border-radius:12px;line-height:1.45}
+    .msg.ai{align-self:flex-start;background:var(--ai-bubble);border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 18px rgba(12,15,20,0.5);}
+    .msg.user{align-self:flex-end;background:linear-gradient(90deg, rgba(124,92,255,0.14), rgba(0,194,255,0.06));color:#dbe9ff;border:1px solid rgba(255,255,255,0.03)}
+    .msg .who{font-weight:700;font-size:12px;margin-bottom:6px;color:var(--muted)}
+
+    .typing{display:inline-block;height:12px}
+    .dots span{display:inline-block;width:6px;height:6px;border-radius:99px;margin-right:4px;opacity:0.6;animation:dot 1s infinite}
+    .dots span:nth-child(2){animation-delay:0.15s}
+    .dots span:nth-child(3){animation-delay:0.3s}
+    @keyframes dot{0%{transform:translateY(0);opacity:.3}50%{transform:translateY(-6px);opacity:1}100%{transform:translateY(0);opacity:.3}}
+
+    /* composer */
+    .composer{padding:12px;border-top:1px solid rgba(255,255,255,0.02);display:flex;gap:10px;align-items:center}
+    .input{flex:1;background:transparent;border-radius:10px;padding:12px 14px;border:1px dashed rgba(255,255,255,0.03);min-height:46px;color:inherit;outline:none;font-size:14px}
+    .send{background:linear-gradient(90deg,var(--accent),#00c2ff);border:none;padding:10px 14px;border-radius:10px;color:#071129;font-weight:700;cursor:pointer}
+
+    /* small utilities */
+    .meta-actions{display:flex;gap:8px;align-items:center}
+    .chip{font-size:12px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02);color:var(--muted)}
+
+    /* responsive */
+    @media(max-width:880px){
+      .app{grid-template-columns:1fr;}
+      .sidebar{display:none}
+    }
+
+    /* cute shadow for code blocks inside messages */
+    pre{background:rgba(0,0,0,0.25);padding:10px;border-radius:8px;overflow:auto;font-family:JetBrains Mono, monospace;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">AI</div>
+        <div>
+          <h1>Appeal AI</h1>
+          <p>Thoughtful answers. Fast.</p>
+        </div>
+      </div>
+
+      <div class="side-actions">
+        <button class="btn" id="newConv">+ New chat</button>
+        <button class="btn" id="clearConv">Clear</button>
+      </div>
+
+      <div class="conversations" id="conversations">
+        <!-- conversation items go here -->
+      </div>
+
+      <div class="footer">v1 • Local demo</div>
+    </aside>
+
+    <main class="panel">
+      <div class="topbar">
+        <div class="session-title">
+          <div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#00c2ff);display:flex;align-items:center;justify-content:center;color:#071129;font-weight:700">A</div>
+          <div>
+            <h2>Appeal AI</h2>
+            <div class="meta">A sleek, local chat UI — press Enter to send</div>
+          </div>
+        </div>
+        <div class="meta-actions">
+          <div class="chip" id="modelChip">Model: local-demo</div>
+          <div class="chip" id="stats">Tokens: 0</div>
+        </div>
+      </div>
+
+      <div class="messages" id="messages" tabindex="0">
+        <!-- messages injected by JS -->
+      </div>
+
+      <div class="composer">
+        <div contenteditable="true" role="textbox" aria-label="Message input" class="input" id="input" spellcheck="true"></div>
+        <button class="send" id="sendBtn">Send</button>
+      </div>
+    </main>
+  </div>
+
+  <template id="tpl-msg-ai">
+    <div class="msg ai">
+      <div class="who">Appeal AI</div>
+      <div class="content"></div>
+    </div>
+  </template>
+  <template id="tpl-msg-user">
+    <div class="msg user">
+      <div class="who">You</div>
+      <div class="content"></div>
+    </div>
+  </template>
+
+  <script>
+    // Minimal demo logic for the chat UI. Replace the `generateReply` function with
+    // an API call (OpenAI or your own) to power real responses.
+
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const messages = document.getElementById('messages');
+    const conversations = document.getElementById('conversations');
+    const newConv = document.getElementById('newConv');
+    const clearConv = document.getElementById('clearConv');
+    const stats = document.getElementById('stats');
+
+    let tokenCount = 0;
+
+    function makeMsg(kind, html){
+      const tpl = document.getElementById(kind==='ai'?'tpl-msg-ai':'tpl-msg-user');
+      const node = tpl.content.firstElementChild.cloneNode(true);
+      node.querySelector('.content').innerHTML = html;
+      return node;
+    }
+
+    function sanitize(s){
+      // tiny sanitizer for demonstration — replace with a robust library in production
+      return s.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    }
+
+    function appendMessage(kind, text){
+      const el = makeMsg(kind, sanitize(text));
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight - messages.clientHeight + 100;
+    }
+
+    function setTyping(on){
+      const id = 'typing-dot';
+      if(on){
+        if(!document.getElementById(id)){
+          const el = makeMsg('ai', '<div class="typing dots"><span></span><span></span><span></span></div>');
+          el.id = id;
+          messages.appendChild(el);
+          messages.scrollTop = messages.scrollHeight;
+        }
+      }else{
+        const t = document.getElementById(id);
+        if(t) t.remove();
+      }
+    }
+
+    function fakeTokenCalc(text){
+      tokenCount += Math.max(1, Math.round(text.length/4));
+      stats.textContent = 'Tokens: ' + tokenCount;
+    }
+
+    // Replace this with real API integration. This function currently simulates
+    // streaming replies and some basic answer formatting.
+    async function generateReply(prompt, onChunk){
+      // Simulate network latency
+      await new Promise(r => setTimeout(r, 350));
+
+      // Very simple canned responses to demo UI — extend however you want
+      const base = [
+        "Got it. Here's a clear answer:",
+        "Nice question — short answer:",
+        "I can help with that. First, consider",
+        "Here's a step-by-step you can try:",
+      ];
+
+      const long = (
+        "I can't actually call an LLM in this local demo, so this is a placeholder reply. " +
+        "If you connect Appeal AI to an API endpoint, responses will stream here in chunks just like ChatGPT. " +
+        "For now, paste any question and the UI will show progressive output."
+      ).split(' ');
+
+      // send a short intro
+      if(onChunk) onChunk(base[Math.floor(Math.random()*base.length)] + '\n\n');
+
+      // stream words slowly
+      for(let i=0;i<long.length;i++){
+        await new Promise(r=>setTimeout(r, 60 + Math.random()*40));
+        if(onChunk) onChunk(long[i] + (i%8===7? '\n' : ' '));
+      }
+
+      // occasionally include a code block sample
+      if(onChunk) onChunk('\n\n```
+function hello(){\n  console.log("hello from Appeal AI")\n}\n```\n');
+
+      return;
+    }
+
+    async function send(){
+      const text = input.innerText.trim();
+      if(!text) return;
+      input.innerText = '';
+      appendMessage('user', text);
+      fakeTokenCalc(text);
+
+      // Show typing indicator
+      setTyping(true);
+
+      // For streaming we render chunks into the last AI bubble
+      let current = null;
+      await generateReply(text, chunk => {
+        setTyping(true);
+        if(!current){
+          const node = makeMsg('ai','');
+          messages.appendChild(node);
+          current = node.querySelector('.content');
+          messages.scrollTop = messages.scrollHeight;
+        }
+        // simple markdown-like code block handling
+        const existing = current.innerHTML;
+        current.innerHTML = existing + sanitize(chunk).replace(/``\n([\s\S]*?)\n```/g, (m,c)=>'<pre>'+c.replace(/&lt;/g,'<')+'</pre>');
+        messages.scrollTop = messages.scrollHeight;
+      });
+
+      setTyping(false);
+      fakeTokenCalc('response');
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', e=>{
+      if(e.key==='Enter' && !e.shiftKey){
+        e.preventDefault();
+        send();
+      }
+    });
+
+    // small conv management — purely cosmetic for demo
+    newConv.addEventListener('click', ()=>{
+      messages.innerHTML = '';
+      tokenCount = 0; stats.textContent = 'Tokens: 0';
+    });
+    clearConv.addEventListener('click', ()=>{
+      messages.innerHTML = '';
+    });
+
+    // add a demo welcome message
+    appendMessage('ai', "Hello — I'm Appeal AI. Try asking me to write, summarize, or help debug code. Press Enter to send.");
+
+    // small accessibility: focus input on load
+    setTimeout(()=>input.focus(),300);
+
+    // placeholder: how to connect to an API
+    /*
+    To connect to a real LLM API and stream tokens into the UI:
+     1. Hook up `generateReply` to your server or directly to an API that supports streaming.
+     2. Call onChunk for each token/chunk you receive to update the UI progressively.
+     3. Make sure to sanitize and safely render any content (handle code blocks, markdown, images).
+    */
+  </script>
+</body>
+</html>

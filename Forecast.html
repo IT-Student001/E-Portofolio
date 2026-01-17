@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fictional Weather Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+body{background:#111;color:#eee;display:flex;justify-content:center;align-items:center;height:100vh;}
+#weather-container{width:500px;max-width:95%;background:#1e1e1e;padding:24px;border-radius:16px;box-shadow:0 0 50px rgba(0,0,0,0.7);}
+h2{text-align:center;margin-bottom:16px;}
+#search-bar{display:flex;gap:10px;margin-bottom:20px;}
+#search-bar input{flex:1;padding:12px;border-radius:10px;border:none;background:#2a2a2a;color:#fff;outline:none;}
+#search-bar button{padding:12px 18px;border:none;border-radius:10px;background:#0e8ce6;color:#fff;font-weight:600;cursor:pointer;}
+#search-bar button:hover{background:#007acc;}
+#weather-info{text-align:center;}
+#weather-info img{width:100px;height:100px;}
+#forecast{display:flex;justify-content:space-between;margin-top:20px;}
+.forecast-day{background:#2a2a2a;padding:10px;border-radius:10px;flex:1;margin:0 5px;text-align:center;}
+.forecast-day img{width:50px;height:50px;}
+</style>
+</head>
+<body>
+<div id="weather-container">
+  <h2>Weather Dashboard</h2>
+  <div id="search-bar">
+    <input type="text" id="cityInput" placeholder="Enter city (e.g., Gotham)"/>
+    <button id="searchBtn">Search</button>
+  </div>
+  <div id="weather-info"></div>
+  <div id="forecast"></div>
+</div>
+
+<script>
+const fictionalWeather = {
+  "Gotham": {
+    current:{temp:12,humidity:80,desc:"Cloudy",icon:"https://via.placeholder.com/100?text=☁"},
+    forecast:[
+      {day:"Day 1",temp:14,desc:"Rainy",icon:"https://via.placeholder.com/50?text=🌧"},
+      {day:"Day 2",temp:15,desc:"Cloudy",icon:"https://via.placeholder.com/50?text=☁"},
+      {day:"Day 3",temp:10,desc:"Foggy",icon:"https://via.placeholder.com/50?text=🌫"},
+      {day:"Day 4",temp:13,desc:"Rainy",icon:"https://via.placeholder.com/50?text=🌧"},
+      {day:"Day 5",temp:16,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+    ]
+  },
+  "Metropolis": {
+    current:{temp:25,humidity:40,desc:"Sunny",icon:"https://via.placeholder.com/100?text=☀"},
+    forecast:[
+      {day:"Day 1",temp:26,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+      {day:"Day 2",temp:24,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+      {day:"Day 3",temp:22,desc:"Cloudy",icon:"https://via.placeholder.com/50?text=☁"},
+      {day:"Day 4",temp:25,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+      {day:"Day 5",temp:27,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+    ]
+  },
+  "Wakanda": {
+    current:{temp:28,humidity:35,desc:"Sunny",icon:"https://via.placeholder.com/100?text=☀"},
+    forecast:[
+      {day:"Day 1",temp:29,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+      {day:"Day 2",temp:30,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+      {day:"Day 3",temp:31,desc:"Sunny",icon:"https://via.placeholder.com/50?text=☀"},
+      {day:"Day 4",temp:28,desc:"Cloudy",icon:"https://via.placeholder.com/50?text=☁"},
+      {day:"Day 5",temp:27,desc:"Rainy",icon:"https://via.placeholder.com/50?text=🌧"},
+    ]
+  }
+};
+
+const searchBtn=document.getElementById("searchBtn");
+const cityInput=document.getElementById("cityInput");
+const weatherInfo=document.getElementById("weather-info");
+const forecastEl=document.getElementById("forecast");
+
+function renderWeather(city){
+  const data = fictionalWeather[city];
+  if(!data){ alert("City not found. Try Gotham, Metropolis, or Wakanda."); return; }
+
+  const c = data.current;
+  weatherInfo.innerHTML=`
+    <h3>${city}</h3>
+    <img src="${c.icon}"/>
+    <p>${c.desc}</p>
+    <p>Temp: ${c.temp}°C | Humidity: ${c.humidity}%</p>
+  `;
+
+  forecastEl.innerHTML="";
+  data.forecast.forEach(f=>{
+    const div = document.createElement("div");
+    div.className="forecast-day";
+    div.innerHTML=`
+      <h4>${f.day}</h4>
+      <img src="${f.icon}"/>
+      <p>${f.desc}</p>
+      <p>${f.temp}°C</p>
+    `;
+    forecastEl.appendChild(div);
+  });
+}
+
+searchBtn.addEventListener("click",()=>{
+  const city = cityInput.value.trim();
+  if(city) renderWeather(city);
+});
+
+cityInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter") searchBtn.click();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>To-Do Task Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+body{background:#111;display:flex;justify-content:center;align-items:center;height:100vh;color:#eee;}
+#todo-container{width:500px;max-width:90%;background:#1e1e1e;padding:24px;border-radius:16px;box-shadow:0 0 40px rgba(0,0,0,0.7);}
+h2{text-align:center;margin-bottom:16px;}
+#task-input{display:flex;gap:10px;margin-bottom:20px;}
+#task-input input{flex:1;padding:12px;border-radius:10px;border:none;background:#2a2a2a;color:#fff;outline:none;}
+#task-input button{padding:12px 18px;border:none;border-radius:10px;background:#0e8ce6;color:#fff;font-weight:600;cursor:pointer;}
+#task-input button:hover{background:#007acc;}
+#tasks{list-style:none;}
+.task-item{padding:12px 16px;border-radius:12px;background:#2a2a2a;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;transition:0.3s;}
+.task-item.completed{text-decoration:line-through;color:#888;}
+.task-item button{background:#e64c4c;border:none;color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;transition:0.3s;}
+.task-item button:hover{background:#ff4c4c;}
+</style>
+</head>
+<body>
+<div id="todo-container">
+  <h2>To-Do Task Manager</h2>
+  <div id="task-input">
+    <input type="text" id="newTask" placeholder="Enter new task"/>
+    <button id="addBtn">Add Task</button>
+  </div>
+  <ul id="tasks"></ul>
+</div>
+
+<script>
+const newTask = document.getElementById("newTask");
+const addBtn = document.getElementById("addBtn");
+const tasksUL = document.getElementById("tasks");
+
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+// ===== RENDER TASKS =====
+function renderTasks(){
+  tasksUL.innerHTML="";
+  tasks.forEach((t,i)=>{
+    const li = document.createElement("li");
+    li.className="task-item"+(t.completed?" completed":"");
+    li.textContent = t.text;
+
+    const completeBtn = document.createElement("button");
+    completeBtn.textContent = t.completed?"Undo":"Done";
+    completeBtn.addEventListener("click",()=>{
+      tasks[i].completed=!tasks[i].completed;
+      saveTasks();
+      renderTasks();
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent="Delete";
+    deleteBtn.style.marginLeft="8px";
+    deleteBtn.addEventListener("click",()=>{
+      tasks.splice(i,1);
+      saveTasks();
+      renderTasks();
+    });
+
+    const btnContainer = document.createElement("div");
+    btnContainer.appendChild(completeBtn);
+    btnContainer.appendChild(deleteBtn);
+
+    li.appendChild(btnContainer);
+    tasksUL.appendChild(li);
+  });
+}
+
+// ===== SAVE TASKS =====
+function saveTasks(){
+  localStorage.setItem("tasks",JSON.stringify(tasks));
+}
+
+// ===== ADD TASK =====
+addBtn.addEventListener("click",()=>{
+  const text = newTask.value.trim();
+  if(!text) return alert("Enter a task");
+  tasks.push({text:text,completed:false});
+  saveTasks();
+  renderTasks();
+  newTask.value="";
+});
+
+newTask.addEventListener("keydown",e=>{
+  if(e.key==="Enter") addBtn.click();
+});
+
+renderTasks();
+</script>
+</body>
+</html>

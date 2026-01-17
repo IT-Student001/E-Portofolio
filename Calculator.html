@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advanced Calculator</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+body{background:#111;display:flex;justify-content:center;align-items:center;height:100vh;color:#eee;}
+#calc-container{width:350px;padding:24px;background:#1e1e1e;border-radius:16px;box-shadow:0 0 50px rgba(0,0,0,0.7);}
+#display{background:#2a2a2a;color:#fff;font-size:2rem;text-align:right;padding:16px;border-radius:12px;margin-bottom:16px;overflow-x:auto;}
+#history{max-height:80px;overflow-y:auto;font-size:0.8rem;margin-bottom:12px;color:#aaa;}
+.buttons{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+button{padding:18px;font-size:1.2rem;border:none;border-radius:10px;background:#2a2a2a;color:#fff;cursor:pointer;transition:0.2s;}
+button:hover{background:#0e8ce6;color:#fff;}
+button.operator{background:#0e8ce6;}
+button.operator:hover{background:#007acc;}
+button.equal{background:#4fc3f7;grid-column:span 2;}
+button.equal:hover{background:#0bb;}
+</style>
+</head>
+<body>
+<div id="calc-container">
+  <div id="history"></div>
+  <div id="display">0</div>
+  <div class="buttons">
+    <button class="operator" data-val="C">C</button>
+    <button class="operator" data-val="±">±</button>
+    <button class="operator" data-val="%">%</button>
+    <button class="operator" data-val="/">÷</button>
+
+    <button data-val="7">7</button>
+    <button data-val="8">8</button>
+    <button data-val="9">9</button>
+    <button class="operator" data-val="*">×</button>
+
+    <button data-val="4">4</button>
+    <button data-val="5">5</button>
+    <button data-val="6">6</button>
+    <button class="operator" data-val="-">−</button>
+
+    <button data-val="1">1</button>
+    <button data-val="2">2</button>
+    <button data-val="3">3</button>
+    <button class="operator" data-val="+">+</button>
+
+    <button data-val="0" style="grid-column:span 2;">0</button>
+    <button data-val=".">.</button>
+    <button class="equal" data-val="=">=</button>
+  </div>
+</div>
+
+<script>
+const display = document.getElementById("display");
+const historyEl = document.getElementById("history");
+let current = "";
+let hist = [];
+
+function updateDisplay(){
+  display.textContent = current || "0";
+}
+
+function updateHistory(){
+  historyEl.textContent = hist.join(" | ");
+}
+
+document.querySelectorAll("button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const val = btn.dataset.val;
+    if(val==="C"){ current=""; }
+    else if(val==="±"){ current = current.startsWith("-")?current.slice(1):"-"+current; }
+    else if(val==="="){
+      try{
+        let result = eval(current.replace(/×/g,"*").replace(/÷/g,"/"));
+        hist.push(current + " = " + result);
+        current = result;
+        updateHistory();
+      }catch(e){current="Error";}
+    }else{
+      current += val;
+    }
+    updateDisplay();
+  });
+});
+
+// Keyboard support
+document.addEventListener("keydown",e=>{
+  if("0123456789".includes(e.key)) document.querySelector(`[data-val='${e.key}']`).click();
+  else if(["/","*","-","+"].includes(e.key)) document.querySelector(`[data-val='${e.key}']`).click();
+  else if(e.key==="Enter") document.querySelector(`[data-val='=']`).click();
+  else if(e.key==="Backspace") current=current.slice(0,-1);
+  updateDisplay();
+});
+</script>
+</body>
+</html>

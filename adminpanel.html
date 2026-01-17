@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Star Program Admin Panel</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#0d0d0d; color:white; padding:30px; }
+  h1 { margin-bottom:20px; }
+  .acct { padding:10px; border:1px solid #444; margin-bottom:10px; border-radius:8px; }
+  input, button { padding:10px; margin:5px 0; width:100%; border-radius:6px; border:none; }
+  button { background:#ffcc00; font-weight:bold; cursor:pointer; }
+</style>
+</head>
+<body>
+<h1>⭐ Star Program Admin Panel</h1>
+<p>Send money to any account stored in LocalStorage.</p>
+
+<div id="accounts"></div>
+
+<h3>Send Money</h3>
+<input id="target" placeholder="Target Username">
+<input id="amount" type="number" placeholder="Amount">
+<button id="send">Send Money</button>
+
+<script>
+// ===== CONNECT TO ADMIN PANEL (LocalStorage Shared Accounts) =====
+function loadAccounts(){ return JSON.parse(localStorage.getItem('SP_accounts') || '{}'); }
+function saveAccounts(a){ localStorage.setItem('SP_accounts', JSON.stringify(a)); }
+let accounts = loadAccounts();
+let currentUser = null;
+
+// --- Load accounts from localStorage ---
+function loadAccounts() {
+  let acc = localStorage.getItem("SP_accounts");
+  if (!acc) return {};
+  return JSON.parse(acc);
+}
+
+function saveAccounts(data) {
+  localStorage.setItem("SP_accounts", JSON.stringify(data));
+}
+
+let accounts = loadAccounts();
+
+function render() {
+  const box = document.getElementById("accounts");
+  box.innerHTML = Object.entries(accounts).map(([name, data]) => `
+    <div class="acct"><b>${name}</b><br>Checking: $${data.checking}<br>Savings: $${data.savings}</div>
+  `).join("");
+}
+render();
+
+// --- Send money ---
+document.getElementById("send").onclick = () => {
+  let t = document.getElementById("target").value.trim();
+  let amt = parseFloat(document.getElementById("amount").value);
+
+  if (!accounts[t]) return alert("Account does not exist.");
+  if (isNaN(amt) || amt <= 0) return alert("Invalid amount.");
+
+  accounts[t].checking += amt;
+  saveAccounts(accounts);
+  render();
+  alert("Money sent!");
+};
+</script>
+</body>
+</html>

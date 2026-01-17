@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Portfolio Gallery</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+body{background:#111;color:#eee;display:flex;justify-content:center;align-items:center;height:100vh;}
+#gallery-container{width:800px;max-width:95%;padding:24px;border-radius:16px;background:#1e1e1e;box-shadow:0 0 50px rgba(0,0,0,0.7);}
+h2{text-align:center;margin-bottom:16px;}
+#filter-buttons{display:flex;justify-content:center;gap:12px;margin-bottom:20px;}
+#filter-buttons button{padding:8px 16px;border:none;border-radius:8px;background:#0e8ce6;color:#fff;cursor:pointer;font-weight:600;transition:0.3s;}
+#filter-buttons button:hover{background:#007acc;}
+#filter-buttons button.active{background:#4fc3f7;color:#000;}
+#gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;}
+.card{position:relative;background:#2a2a2a;border-radius:12px;overflow:hidden;cursor:pointer;transition:transform 0.3s,box-shadow 0.3s;}
+.card img{width:100%;height:150px;object-fit:cover;display:block;}
+.card .title{padding:8px;text-align:center;font-weight:600;font-size:1rem;}
+.card:hover{transform:scale(1.05);box-shadow:0 8px 20px rgba(0,0,0,0.5);}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none;transition:0.3s;}
+.modal.active{opacity:1;pointer-events:auto;}
+.modal img{max-width:90%;max-height:80%;border-radius:12px;}
+.modal span{position:absolute;top:20px;right:30px;font-size:2rem;color:#fff;cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="gallery-container">
+  <h2>Portfolio Gallery</h2>
+  <div id="filter-buttons">
+    <button class="active" data-filter="all">All</button>
+    <button data-filter="web">Web</button>
+    <button data-filter="design">Design</button>
+    <button data-filter="js">JavaScript</button>
+  </div>
+  <div id="gallery"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <span id="closeModal">&times;</span>
+  <img id="modalImg" src="">
+</div>
+
+<script>
+const projects=[
+  {title:"AI Chatbot",img:"https://via.placeholder.com/200x150?text=AI+Chatbot",category:"js"},
+  {title:"Interactive Quiz",img:"https://via.placeholder.com/200x150?text=Quiz",category:"js"},
+  {title:"Task Manager",img:"https://via.placeholder.com/200x150?text=Tasks",category:"js"},
+  {title:"Landing Page",img:"https://via.placeholder.com/200x150?text=Web+Design",category:"web"},
+  {title:"Logo Design",img:"https://via.placeholder.com/200x150?text=Logo",category:"design"},
+  {title:"Weather App",img:"https://via.placeholder.com/200x150?text=Weather",category:"js"},
+  {title:"Portfolio Website",img:"https://via.placeholder.com/200x150?text=Portfolio",category:"web"},
+  {title:"Illustration",img:"https://via.placeholder.com/200x150?text=Illustration",category:"design"},
+];
+
+const gallery=document.getElementById("gallery");
+const filterBtns=document.querySelectorAll("#filter-buttons button");
+const modal=document.getElementById("modal");
+const modalImg=document.getElementById("modalImg");
+const closeModal=document.getElementById("closeModal");
+
+function renderGallery(filter="all"){
+  gallery.innerHTML="";
+  projects.filter(p=>filter==="all"||p.category===filter).forEach(p=>{
+    const card=document.createElement("div");
+    card.className="card";
+    const img=document.createElement("img");
+    img.src=p.img;
+    const title=document.createElement("div");
+    title.className="title";
+    title.textContent=p.title;
+    card.appendChild(img);
+    card.appendChild(title);
+    card.addEventListener("click",()=>{
+      modal.classList.add("active");
+      modalImg.src=p.img;
+    });
+    gallery.appendChild(card);
+  });
+}
+
+filterBtns.forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    filterBtns.forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    renderGallery(btn.dataset.filter);
+  });
+});
+
+closeModal.addEventListener("click",()=>modal.classList.remove("active"));
+modal.addEventListener("click",e=>{ if(e.target===modal) modal.classList.remove("active"); });
+
+renderGallery();
+</script>
+</body>
+</html>
